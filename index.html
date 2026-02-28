@@ -1,71 +1,297 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Businesses in NG</title>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f6f9;
-      padding: 15px;
+    :root{
+      --bg:#f4f6f9;
+      --card:#ffffff;
+      --text:#0b1220;
+      --muted:#5b6475;
+      --brand:#0d47a1;
+      --line:#e6e9ef;
     }
-
-    h2 {
-      text-align: center;
-      color: #0d47a1;
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding:16px;
     }
-
-    .card {
-      background: white;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    header{
+      max-width:900px;
+      margin:0 auto 12px;
+      text-align:center;
     }
-
-    .title {
-      font-weight: bold;
-      font-size: 16px;
-      color: #0d47a1;
+    h1{
+      margin:10px 0 6px;
+      color:var(--brand);
+      font-size:28px;
+      font-weight:800;
+      letter-spacing:.2px;
     }
-
-    .info {
-      font-size: 14px;
-      margin-top: 4px;
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .toolbar{
+      max-width:900px;
+      margin:14px auto 10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:center;
+    }
+    input, select{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:10px 12px;
+      font-size:14px;
+      outline:none;
+      background:#fff;
+    }
+    input{ width:min(520px, 92vw); }
+    select{ width:180px; }
+    .meta{
+      max-width:900px;
+      margin:8px auto 0;
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+    }
+    #list{
+      max-width:900px;
+      margin:14px auto 50px;
+      display:grid;
+      gap:12px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    }
+    .title{
+      font-weight:800;
+      font-size:16px;
+      color:var(--brand);
+      margin-bottom:6px;
+      line-height:1.2;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+      color:var(--text);
+      font-size:14px;
+      margin:3px 0;
+    }
+    .label{ color:var(--muted); }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:13px;
+      color:var(--text);
+    }
+    .error{
+      max-width:900px;
+      margin:14px auto;
+      background:#fff;
+      border:1px solid #ffd0d0;
+      color:#9b1c1c;
+      border-radius:14px;
+      padding:12px;
+    }
+    .loading{
+      max-width:900px;
+      margin:14px auto;
+      color:var(--muted);
+      text-align:center;
     }
   </style>
+
+  <!-- CSV parser (handles commas, quotes, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 
 <body>
+  <header>
+    <h1>Businesses in NG 🇳🇬</h1>
+    <p class="sub">Live directory from your Google Sheet</p>
+  </header>
 
-<h2>Businesses in NG 🇳🇬</h2>
-<div id="list"></div>
+  <div class="toolbar">
+    <input id="search" placeholder="Search business name, category, state, LGA, phone…" />
+    <select id="stateFilter">
+      <option value="">All states</option>
+    </select>
+  </div>
 
-<script>
-  const sheetURL = "https://docs.google.com/spreadsheets/d/1Q3ZvAT19HUcNMm7xnYPGOsW7rlLAF51p9izM7-CYhJ8/export?format=csv";
+  <div class="meta" id="meta"></div>
+  <div class="loading" id="loading">Loading businesses…</div>
+  <div class="error" id="error" style="display:none;"></div>
 
-fetch(sheetURL)
-  .then(response => response.text())
-  .then(data => {
-    const rows = data.split("\n").slice(1);
-    let output = "";
+  <div id="list"></div>
 
-    rows.forEach(row => {
-      const cols = row.split(",");
+  <script>
+    // ✅ REPLACE THIS with your Google Sheet CSV link
+    // It must be a PUBLIC "published to web" CSV link (steps below).
+    const sheetURL = "PASTE_YOUR_CSV_LINK_HERE";
 
-      if (cols.length > 5) {
-        output += `
-          <div class="card">
-            <div class="title">${cols[1]}</div>
-            <div class="info">Category: ${cols[2]}</div>
-            <div class="info">State: ${cols[3]}</div>
-            <div class="info">LGA: ${cols[4]}</div>
-            <div class="info">Phone: ${cols[5]}</div>
-          </div>
-        `;
+    const listEl = document.getElementById("list");
+    const metaEl = document.getElementById("meta");
+    const loadingEl = document.getElementById("loading");
+    const errorEl = document.getElementById("error");
+    const searchEl = document.getElementById("search");
+    const stateFilterEl = document.getElementById("stateFilter");
+
+    let allRows = [];
+
+    function showError(msg){
+      loadingEl.style.display = "none";
+      errorEl.style.display = "block";
+      errorEl.innerHTML = msg;
+    }
+
+    function safe(v){
+      return (v ?? "").toString().trim();
+    }
+
+    function render(rows){
+      const q = safe(searchEl.value).toLowerCase();
+      const st = safe(stateFilterEl.value).toLowerCase();
+
+      const filtered = rows.filter(r => {
+        const name = safe(r.businessName).toLowerCase();
+        const cat  = safe(r.category).toLowerCase();
+        const state= safe(r.state).toLowerCase();
+        const lga  = safe(r.lga).toLowerCase();
+        const phone= safe(r.phone).toLowerCase();
+
+        const matchesSearch = !q || [name, cat, state, lga, phone].some(x => x.includes(q));
+        const matchesState  = !st || state === st;
+        return matchesSearch && matchesState;
+      });
+
+      metaEl.textContent = `${filtered.length} shown / ${rows.length} total`;
+
+      if (!filtered.length){
+        listEl.innerHTML = `<div class="card"><div class="title">No results</div><div class="row"><span class="label">Try changing the search or state filter.</span></div></div>`;
+        return;
       }
-    });
 
-    document.getElementById("list").innerHTML = output;
-  });
+      listEl.innerHTML = filtered.map(r => `
+        <div class="card">
+          <div class="title">${escapeHtml(r.businessName)}</div>
+          <div class="row"><span class="label">Category:</span> <span class="pill">${escapeHtml(r.category || "-")}</span></div>
+          <div class="row"><span class="label">State:</span> <span class="pill">${escapeHtml(r.state || "-")}</span></div>
+          <div class="row"><span class="label">LGA:</span> <span class="pill">${escapeHtml(r.lga || "-")}</span></div>
+          <div class="row"><span class="label">Phone:</span> <span class="pill">${escapeHtml(r.phone || "-")}</span></div>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(str){
+      return safe(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function buildStateFilter(rows){
+      const states = [...new Set(rows.map(r => safe(r.state)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+      stateFilterEl.innerHTML = `<option value="">All states</option>` + states.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    }
+
+    function parseRows(parsed){
+      // Assumption: Your columns match:
+      // [Timestamp, Business Name, Category, State, LGA, Phone]
+      // If yours differ, tell me the exact column order and I’ll adjust.
+      const data = parsed.data || [];
+      const rows = [];
+
+      for (let i = 1; i < data.length; i++){
+        const row = data[i];
+        if (!row || row.length < 2) continue;
+
+        const businessName = safe(row[1]);
+        const category     = safe(row[2]);
+        const state        = safe(row[3]);
+        const lga          = safe(row[4]);
+        const phone        = safe(row[5]);
+
+        if (!businessName) continue; // skip blank lines
+
+        rows.push({ businessName, category, state, lga, phone });
+      }
+      return rows;
+    }
+
+    function load(){
+      if (!sheetURL || sheetURL.includes("PASTE_YOUR_CSV_LINK_HERE")){
+        showError(`You still need to paste your CSV link.<br><br>
+          In this file, find:<br>
+          <code>const sheetURL = "PASTE_YOUR_CSV_LINK_HERE";</code><br>
+          and replace it with your Google Sheet CSV URL.`);
+        return;
+      }
+
+      Papa.parse(sheetURL, {
+        download: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          loadingEl.style.display = "none";
+
+          if (results.errors && results.errors.length){
+            console.log(results.errors);
+          }
+
+          allRows = parseRows(results);
+          if (!allRows.length){
+            showError(`No rows found.<br><br>
+              Common causes:
+              <ul>
+                <li>Sheet not published to web as CSV</li>
+                <li>Wrong sheet/tab published</li>
+                <li>Column order not matching</li>
+              </ul>`);
+            return;
+          }
+
+          buildStateFilter(allRows);
+          render(allRows);
+
+          searchEl.addEventListener("input", () => render(allRows));
+          stateFilterEl.addEventListener("change", () => render(allRows));
+        },
+        error: (err) => {
+          console.log(err);
+          showError(`Could not load the sheet.<br><br>
+            Make sure:
+            <ul>
+              <li>Your sheet is published to the web</li>
+              <li>You copied the CSV link (not the normal sheet link)</li>
+              <li>The published sheet is "Form Responses 1"</li>
+            </ul>`);
+        }
+      });
+    }
+
+    load();
+  </script>
+</body>
+  </html>
