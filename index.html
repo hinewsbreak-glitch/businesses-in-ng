@@ -1,6 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Businesses in NG</title>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  margin:0;
+  padding:20px;
+  background:#f4f6f9;
+}
+
+h1{
+  text-align:center;
+  color:#0d47a1;
+}
+
+.toolbar{
+  max-width:800px;
+  margin:20px auto;
+  display:flex;
+  gap:10px;
+}
+
+input, select{
+  padding:10px;
+  flex:1;
+}
+
+.card{
+  background:white;
+  padding:15px;
+  margin:10px auto;
+  max-width:800px;
+  border-radius:6px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.loading, .error{
+  text-align:center;
+  margin-top:20px;
+}
+
+.error{
+  color:red;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Businesses in NG 🇳🇬</h1>
+
+<div class="toolbar">
+  <input id="search" placeholder="Search business name, category, state..."/>
+  <select id="stateFilter">
+    <option value="">All states</option>
+  </select>
+</div>
+
+<div class="meta" id="meta"></div>
+<div class="loading" id="loading">Loading businesses...</div>
+<div class="error" id="error" style="display:none;"></div>
+<div id="list"></div>
+
 <script>
 
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSd4J2DFQf1bO7uNOyqlibecVqutzPyB2OuulWidDMG9w54C3YtgFiibOCTvzdMqUyRpc4pl6m9V3Cf/pub?gid=240874475&single=true&output=csv";
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSd4J2DFQf1bO7uNOyqlibecVqutzPyB2OuulWidDMG9w54C3YtgFiibOCTvzdMqUyRpc4pl6m9V3Cf/pub?output=csv";
 
 const listEl = document.getElementById("list");
 const metaEl = document.getElementById("meta");
@@ -17,22 +85,29 @@ function showError(msg){
   errorEl.innerHTML = msg;
 }
 
-function safe(v){
-  return (v ?? "").toString().trim();
+function parseCSV(text){
+  return text.trim().split("\n").map(r => r.split(","));
 }
 
-function parseCSV(text){
-  return text.split("\n").map(r => r.split(","));
+function populateStates(rows){
+  const states = [...new Set(rows.map(r => r[3]).filter(Boolean))];
+  states.sort();
+  states.forEach(state => {
+    const opt = document.createElement("option");
+    opt.value = state;
+    opt.textContent = state;
+    stateFilterEl.appendChild(opt);
+  });
 }
 
 function render(rows){
-  const q = safe(searchEl.value).toLowerCase();
-  const state = safe(stateFilterEl.value).toLowerCase();
+  const q = searchEl.value.toLowerCase();
+  const state = stateFilterEl.value.toLowerCase();
 
   const filtered = rows.filter(r => {
-    const matchSearch = r.join(" ").toLowerCase().includes(q);
-    const matchState = !state || safe(r[3]).toLowerCase() === state;
-    return matchSearch && matchState;
+    const matchesSearch = r.join(" ").toLowerCase().includes(q);
+    const matchesState = !state || (r[3] && r[3].toLowerCase() === state);
+    return matchesSearch && matchesState;
   });
 
   listEl.innerHTML = "";
@@ -40,15 +115,13 @@ function render(rows){
   filtered.forEach(r => {
     const card = document.createElement("div");
     card.className = "card";
-
     card.innerHTML = `
-      <h3>${safe(r[1])}</h3>
-      <p><strong>Category:</strong> ${safe(r[2])}</p>
-      <p><strong>State:</strong> ${safe(r[3])}</p>
-      <p><strong>LGA:</strong> ${safe(r[4])}</p>
-      <p><strong>Phone:</strong> ${safe(r[5])}</p>
+      <h3>${r[1] || ""}</h3>
+      <p><strong>Category:</strong> ${r[2] || ""}</p>
+      <p><strong>State:</strong> ${r[3] || ""}</p>
+      <p><strong>LGA:</strong> ${r[4] || ""}</p>
+      <p><strong>Phone:</strong> ${r[5] || ""}</p>
     `;
-
     listEl.appendChild(card);
   });
 
@@ -57,13 +130,14 @@ function render(rows){
 
 fetch(sheetURL)
   .then(res => {
-    if (!res.ok) throw new Error("Network error");
+    if(!res.ok) throw new Error();
     return res.text();
   })
   .then(text => {
     loadingEl.style.display = "none";
     const data = parseCSV(text);
     allRows = data.slice(1);
+    populateStates(allRows);
     render(allRows);
   })
   .catch(() => {
@@ -74,3 +148,6 @@ searchEl.addEventListener("input", () => render(allRows));
 stateFilterEl.addEventListener("change", () => render(allRows));
 
 </script>
+
+</body>
+</html>
