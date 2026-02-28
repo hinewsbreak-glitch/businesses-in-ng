@@ -1,4 +1,5 @@
 <script>
+
 const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSd4J2DFQf1bO7uNOyqlibecVqutzPyB2OuulWidDMG9w54C3YtgFiibOCTvzdMqUyRpc4pl6m9V3Cf/pub?gid=240874475&single=true&output=csv";
 
 const listEl = document.getElementById("list");
@@ -10,37 +11,28 @@ const stateFilterEl = document.getElementById("stateFilter");
 
 let allRows = [];
 
-function showError(msg) {
+function showError(msg){
   loadingEl.style.display = "none";
   errorEl.style.display = "block";
   errorEl.innerHTML = msg;
 }
 
-function safe(v) {
+function safe(v){
   return (v ?? "").toString().trim();
 }
 
-function parseCSV(text) {
-  const rows = [];
-  const lines = text.split("\n");
-
-  for (let line of lines) {
-    const cols = line.split(",");
-    rows.push(cols);
-  }
-
-  return rows;
+function parseCSV(text){
+  return text.split("\n").map(r => r.split(","));
 }
 
-function render(rows) {
+function render(rows){
   const q = safe(searchEl.value).toLowerCase();
-  const state = stateFilterEl.value;
+  const state = safe(stateFilterEl.value).toLowerCase();
 
   const filtered = rows.filter(r => {
-    const joined = r.join(" ").toLowerCase();
-    const matchesSearch = joined.includes(q);
-    const matchesState = !state || r[3] === state;
-    return matchesSearch && matchesState;
+    const matchSearch = r.join(" ").toLowerCase().includes(q);
+    const matchState = !state || safe(r[3]).toLowerCase() === state;
+    return matchSearch && matchState;
   });
 
   listEl.innerHTML = "";
@@ -71,7 +63,7 @@ fetch(sheetURL)
   .then(text => {
     loadingEl.style.display = "none";
     const data = parseCSV(text);
-    allRows = data.slice(1); // skip header
+    allRows = data.slice(1);
     render(allRows);
   })
   .catch(() => {
@@ -80,4 +72,5 @@ fetch(sheetURL)
 
 searchEl.addEventListener("input", () => render(allRows));
 stateFilterEl.addEventListener("change", () => render(allRows));
+
 </script>
