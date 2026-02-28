@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Businesses in NG</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      padding: 15px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #0d47a1;
+    }
+
+    .card {
+      background: white;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+      color: #0d47a1;
+    }
+
+    .info {
+      font-size: 14px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Businesses in NG 🇳🇬</h2>
+<div id="list"></div>
+
+<script>
+  const sheetURL = "https://docs.google.com/spreadsheets/d/1Q3ZvAT19HUcNMm7xnYPGOsW7rlLAF51p9izM7-CYhJ8/export?format=csv";
+
+  fetch(sheetURL)
+    .then(response => response.text())
+    .then(data => {
+      const rows = data.split("\n").slice(1);
+      let output = "";
+
+      rows.forEach(row => {
+        const cols = row.split(",");
+
+        if(cols.length >
