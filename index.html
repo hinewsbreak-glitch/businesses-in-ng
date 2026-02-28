@@ -45,13 +45,27 @@
 <script>
   const sheetURL = "https://docs.google.com/spreadsheets/d/1Q3ZvAT19HUcNMm7xnYPGOsW7rlLAF51p9izM7-CYhJ8/export?format=csv";
 
-  fetch(sheetURL)
-    .then(response => response.text())
-    .then(data => {
-      const rows = data.split("\n").slice(1);
-      let output = "";
+fetch(sheetURL)
+  .then(response => response.text())
+  .then(data => {
+    const rows = data.split("\n").slice(1);
+    let output = "";
 
-      rows.forEach(row => {
-        const cols = row.split(",");
+    rows.forEach(row => {
+      const cols = row.split(",");
 
-        if(cols.length >
+      if (cols.length > 5) {
+        output += `
+          <div class="card">
+            <div class="title">${cols[1]}</div>
+            <div class="info">Category: ${cols[2]}</div>
+            <div class="info">State: ${cols[3]}</div>
+            <div class="info">LGA: ${cols[4]}</div>
+            <div class="info">Phone: ${cols[5]}</div>
+          </div>
+        `;
+      }
+    });
+
+    document.getElementById("list").innerHTML = output;
+  });
